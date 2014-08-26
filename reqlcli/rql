@@ -1,0 +1,34 @@
+#!/usr/bin/env python2
+# -*- mode: python -*-
+'''Quick and dirty script for executing reql from the commandline'''
+
+import argparse
+import reqlcli
+
+DESC = '''\
+Run ReQL commands in the terminal.
+
+If the output is being piped, will print one document per line and not
+use color
+'''
+
+def main(argv):
+    parser = argparse.ArgumentParser(description=DESC)
+    parser.add_argument('--port', '-p', type=int, default=28015,
+                        help='RethinkDB driver port')
+    parser.add_argument('--host', '-t', default='localhost',
+                        help='RethinkDB host address')
+    parser.add_argument('--db', '-d', default='test',
+                        help='default database for queries')
+    parser.add_argument(
+        '--pagesize', '-g', type=int, default=10,
+        help='Documents per page. No effect on piped output')
+    parser.add_argument('QUERY', help='ReQL query to run')
+
+    args = parser.parse_args(argv[1:])
+
+    reqlcli.execute(args.host, args.port, args.db, args.QUERY, args.pagesize)
+
+if __name__ == '__main__':
+    import sys
+    main(sys.argv)

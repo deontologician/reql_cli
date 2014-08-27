@@ -98,6 +98,18 @@ $ rql 'r.table("posts").without("body").limit(5)' | cat
 {"userId":1,"id":7,"title":"magnam facilis autem"}
 ```
 
+## OK, that's pretty great. What else?
+
+Uhh, you could use your RethinkDB server as a calculator if you want:
+
+```bash
+$ rql '1 + 3 + (4 * 3)'
+7
+
+Ran:
+ 7
+```
+
 ## Bugs
 
-Report bugs on [github](http://github.com/deontologician/reql_cli)
+Report bugs on [github](http://github.com/deontologician/reql_cli/issues)

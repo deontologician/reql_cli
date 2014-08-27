@@ -104,10 +104,10 @@ Uhh, you could use your RethinkDB server as a calculator if you want:
 
 ```bash
 $ rql '1 + 3 + (4 * 3)'
-7
+16
 
 Ran:
- 7
+ 16
 ```
 
 ## Bugs

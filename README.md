@@ -41,7 +41,7 @@ optional arguments:
 Create a new table:
 
 ```bash
-$ rql 'r.table_create("widgets")'
+$ rql 'r.table_create("posts")'
 {
     "created": 1
 }
@@ -64,7 +64,7 @@ $ rql 'r.table("posts").insert(r.http("jsonplaceholder.typicode.com/posts"))'
 }
 
 Ran:
- r.table('widgets').insert(r.http('jsonplaceholder.typicode.com/posts'))
+ r.table('posts').insert(r.http('jsonplaceholder.typicode.com/posts'))
 ```
 
 Page through your nice pretty data:

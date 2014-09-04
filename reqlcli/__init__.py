@@ -19,11 +19,13 @@ import rethinkdb as r
 
 BEING_PIPED = not os.isatty(sys.stdout.fileno())
 
+
 class DateJSONEncoder(json.JSONEncoder):
     '''Will format datetimes as iso8601'''
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
+
 
 def json_format(value, style='monokai'):
     '''Formats a json value in a user friendly way'''
@@ -50,20 +52,22 @@ def python_format(output_string, style='monokai'):
     return highlight(
         output_string, PythonLexer(), Terminal256Formatter(style=style))
 
+
 def evaluate(querystring):
     return r.expr(eval(querystring, {
-            'r': r,
-            '__builtins__': {
-                'True': True,
-                'False': False,
-                'None': None,
-            }
-        }))
+        'r': r,
+        '__builtins__': {
+            'True': True,
+            'False': False,
+            'None': None,
+        }
+    }))
 
-def execute(host, port, db, querystring, pagesize):
+
+def execute(host, port, auth_key, db, querystring, pagesize):
     '''Executes a query with the given connection arguments'''
     try:
-        conn = r.connect(host=host, port=port, db=db)
+        conn = r.connect(host=host, auth_key=auth_key, port=port, db=db)
         try:
             query = evaluate(querystring)
         except NameError:

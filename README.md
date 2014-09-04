@@ -18,7 +18,7 @@ $ pip install reql_cli
 
 ```bash
 $ rql --help
-usage: rql [-h] [--port PORT] [--host HOST] [--db DB] [--pagesize PAGESIZE]
+usage: rql [-h] [--port PORT] [--host HOST] [--auth_key AUTH_KEY] [--db DB] [--pagesize PAGESIZE]
            QUERY
 
 Run ReQL commands in the terminal. If the output is being piped, will print
@@ -29,6 +29,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --auth_key, -k        RethinkDB Authentication key
   --port PORT, -p PORT  RethinkDB driver port
   --host HOST, -t HOST  RethinkDB host address
   --db DB, -d DB        default database for queries

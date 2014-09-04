@@ -12,12 +12,15 @@ If the output is being piped, will print one document per line and not
 use color
 '''
 
+
 def main(argv):
     parser = argparse.ArgumentParser(description=DESC)
     parser.add_argument('--port', '-p', type=int, default=28015,
                         help='RethinkDB driver port')
     parser.add_argument('--host', '-t', default='localhost',
                         help='RethinkDB host address')
+    parser.add_argument('--auth_key', '-k', default='',
+                        help='RethinkDB auth key')
     parser.add_argument('--db', '-d', default='test',
                         help='default database for queries')
     parser.add_argument(
@@ -27,7 +30,8 @@ def main(argv):
 
     args = parser.parse_args(argv[1:])
 
-    reqlcli.execute(args.host, args.port, args.db, args.QUERY, args.pagesize)
+    reqlcli.execute(args.host, args.port, args.auth_key, args.db,
+                    args.QUERY, args.pagesize)
 
 if __name__ == '__main__':
     import sys

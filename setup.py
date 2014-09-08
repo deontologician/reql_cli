@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='reql_cli',
-    version='0.1.2',
+    version='0.1.3',
     packages=['reqlcli'],
     scripts=['reqlcli/rql'],
     description='Run RethinkDB ReQL commands from the terminal',

@@ -4,6 +4,7 @@
 
 import argparse
 import reqlcli
+from pygments.styles import STYLE_MAP
 
 DESC = '''\
 Run ReQL commands in the terminal.
@@ -23,15 +24,29 @@ def main(argv):
                         help='RethinkDB auth key')
     parser.add_argument('--db', '-d', default='test',
                         help='default database for queries')
-    parser.add_argument(
-        '--pagesize', '-g', type=int, default=10,
-        help='Documents per page. No effect on piped output')
-    parser.add_argument('QUERY', type=str, help='ReQL query to run')
+    parser.add_argument('--pagesize', '-g', type=int, default=10,
+                        help='Documents per page. No effect on piped output')
+    parser.add_argument('--style', '-s', default='monokai',
+                        help='Source code color scheme. Valid values: '
+                        + ', '.join(STYLE_MAP.keys()))
+    parser.add_argument('--array', '-a', dest='format', action='store_const',
+                        const='array', default='auto',
+                        help='Force JSON array output')
+    parser.add_argument('--newline', '-n', dest='format', action='store_const',
+                        const='newline', default='auto',
+                        help='Force one document per line output')
+    parser.add_argument('--color', '-c', dest='format', action='store_const',
+                        const='color', default='auto',
+                        help='Force color/pretty printed output')
+    parser.add_argument('--auto', dest='format', action='store_const',
+                        const='auto', default='auto',
+                        help='Decide output format based on whether output '
+                        'is being piped (this is the default)')
+    parser.add_argument('query', metavar='QUERY', help='ReQL query to run')
 
     args = parser.parse_args(argv[1:])
 
-    reqlcli.execute(args.host, args.port, args.auth_key, args.db,
-                    args.QUERY, args.pagesize)
+    reqlcli.execute(args)
 
 if __name__ == '__main__':
     import sys

@@ -16,9 +16,11 @@ $ pip install reql_cli
 
 ## Usage
 
-```bash
+```
 $ rql --help
-usage: rql [-h] [--port PORT] [--host HOST] [--auth_key AUTH_KEY] [--db DB] [--pagesize PAGESIZE]
+usage: rql [-h] [--port PORT] [--host HOST] [--auth_key AUTH_KEY] [--db DB]
+           [--pagesize PAGESIZE] [--style STYLE] [--array] [--newline]
+           [--color] [--auto]
            QUERY
 
 Run ReQL commands in the terminal. If the output is being piped, will print
@@ -29,12 +31,23 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --auth_key, -k        RethinkDB Authentication key
   --port PORT, -p PORT  RethinkDB driver port
   --host HOST, -t HOST  RethinkDB host address
+  --auth_key AUTH_KEY, -k AUTH_KEY
+                        RethinkDB auth key
   --db DB, -d DB        default database for queries
   --pagesize PAGESIZE, -g PAGESIZE
                         Documents per page. No effect on piped output
+  --style STYLE, -s STYLE
+                        Source code color scheme. Valid values: monokai,
+                        manni, rrt, perldoc, borland, colorful, default,
+                        murphy, vs, trac, tango, fruity, autumn, bw, emacs,
+                        vim, pastie, friendly, native
+  --array, -a           Force JSON array output
+  --newline, -n         Force one document per line output
+  --color, -c           Force color/pretty printed output
+  --auto                Decide output format based on whether output is being
+                        piped (this is the default)
 ```
 
 ## Examples:
@@ -99,18 +112,28 @@ $ rql 'r.table("posts").without("body").limit(5)' | cat
 {"userId":1,"id":7,"title":"magnam facilis autem"}
 ```
 
+You can also force the output to be a valid json array with `--array`:
+
+```bash
+$ rql --array 'r.table("posts")("id").limit(5)'
+[1,4,2,6,7]
+```
+
+Note: this format doesn't emit newlines
+
 ## OK, that's pretty great. What else?
 
 Uhh, you could use your RethinkDB server as a calculator if you want:
 
 ```bash
-$ rql '1 + 3 + (4 * 3)'
+$ rql 'r.expr(1) + 3 + (r.expr(4) * 3)'
 16
 
 Ran:
- 16
+ r.expr(1) + 3 + (r.expr(4) * 3)
 ```
 
 ## Bugs
 
-Report bugs on [github](http://github.com/deontologician/reql_cli/issues)
+Report bugs or feature requests on
+[github](http://github.com/deontologician/reql_cli/issues)

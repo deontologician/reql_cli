@@ -89,10 +89,7 @@ class Output(object):
         )
 
     def python_format(self, obj):
-        '''Colorizes python strings'''
-        return highlight(str(obj),
-                         PythonLexer(),
-                         Terminal256Formatter(style=self.style))
+        return obj
 
     def print(self, *args, **kwargs):
         '''Print a value to stdout'''
@@ -155,6 +152,11 @@ class ColorOutput(Output):
         return isinstance(docs, list) and \
             all(isinstance(x, primitives) for x in docs)
 
+    def python_format(self, obj):
+        '''Colorizes python strings'''
+        return highlight(str(obj),
+                         PythonLexer(),
+                         Terminal256Formatter(style=self.style))
 
     def __call__(self, docs, query):
         if isinstance(docs, dict) and 'first_error' in docs:

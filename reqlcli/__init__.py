@@ -41,6 +41,8 @@ def execute(args):
         output.error('\n', ''.join(exc_list))
     except AttributeError as ae:
         output.error(ae.message)
+    except KeyboardInterrupt:
+        pass
 
 
 def evaluate(querystring):
@@ -64,6 +66,8 @@ class Output(object):
     '''Centralizes output behavior'''
 
     input_stream = sys.stdin
+    output_stream = sys.stdout
+    error_stream = sys.stderr
 
     @staticmethod
     def make(format, style, pagesize):
@@ -94,17 +98,19 @@ class Output(object):
                          PythonLexer(),
                          Terminal256Formatter(style=self.style))
 
-    def print(self, value, *args, **kwargs):
+    def print(self, *args, **kwargs):
         '''Print a value to stdout'''
-        print(value, *args, **kwargs)
+        kwargs.setdefault('file', self.output_stream)
+        print(*args, **kwargs)
 
-    def fprint(self, formatstr, *args, **kwargs):
+    def fprint(self, value, **kwargs):
         '''Format string equivalent of printf'''
-        print(formatstr.format(*args, **kwargs))
+        kwargs.setdefault('file', self.output_stream)
+        print(self.format(value), **kwargs)
 
     def error(self, value, *args, **kwargs):
         '''Print a value to stderr'''
-        kwargs.setdefault('file', sys.stderr)
+        kwargs.setdefault('file', self.error_stream)
         print(value, *args, **kwargs)
 
 
@@ -164,14 +170,14 @@ class ColorOutput(Output):
         if isinstance(docs, (dict, int, float, bool, basestring)) or \
            self.is_small_array(docs):
             # Print small things directly
-            self.print(self.format(docs))
+            self.fprint(docs)
             self.print('Ran:\n', self.python_format(query))
             return
         for i, doc in enumerate(docs, start=1):
-            self.print(self.format(doc))
+            self.fprint(doc)
             if i % self.pagesize == 0:
                 self.print('Running:', self.python_format(query))
-                self.fprint('[{}] Hit any key to continue (or q to quit)...', i)
+                self.print('[%s] Hit any key to continue (or q to quit)...' % i)
                 char = self.getch()
                 if char.lower() == 'q':
                     raise SystemExit()
@@ -188,10 +194,10 @@ class NewlineOutput(Output):
 
     def __call__(self, docs, _):
         if isinstance(docs, dict):
-            self.print(self.format(docs))
+            self.fprint(docs)
         else:
             for doc in docs:
-                self.print(self.format(doc))
+                self.fprint(doc)
 
 
 class ArrayOutput(Output):
@@ -201,8 +207,24 @@ class ArrayOutput(Output):
     binary_format = 'raw'
     compact = True
 
+    def print(self, *args, **kwargs):
+        super(ArrayOutput, self).print(*args, **kwargs)
+        self.output_stream.flush()
+
     def __call__(self, docs, _):
         if isinstance(docs, dict):
-            self.print(self.format(docs))
+            self.fprint(docs)
+        elif isinstance(docs, r.Cursor):
+            first = True
+            self.print('[', end='')
+            try:
+                for doc in docs:
+                    if not first:
+                        self.print(',', sep='', end='')
+                    else:
+                        first = False
+                    self.fprint(doc, sep='', end='')
+            finally:
+                self.print(']')
         else:
-            self.print(self.format(list(docs)))
+            self.fprint(docs)

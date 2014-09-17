@@ -22,19 +22,15 @@ def execute(args):
     try:
         conn = r.connect(args.host, args.port, args.db, args.auth_key)
         output = Output.make(args.format, args.style, args.pagesize)
-        try:
-            query = evaluate(args.query)
-        except NameError:
-            # Assume it's just a string if the variable isn't defined
-            query = evaluate(repr(args.query))
+        query = evaluate(args.query)
         results = query.run(conn)
 
-        output(results, args.query)
+        output(results, query)
 
     except r.RqlError as e:
         output.error(e)
     except NameError as ne:
-        output.error(ne.args, ne.message)
+        output.error(ne.message)
     except SyntaxError as se:
         exc_list = traceback.format_exception_only(type(se), se)[1:]
         exc_list[0] = output.python_format(exc_list[0])
@@ -153,13 +149,11 @@ class ColorOutput(Output):
         return highlight(
             doc, JsonLexer(), Terminal256Formatter(style=self.style))
 
-    def is_small_array(self, docs):
-        '''Whether a document is a "small" array'''
-        if isinstance(docs, list) and len(docs) < self.pagesize:
-            primitives = (int, float, bool, basestring)
-            return all(isinstance(x, primitives) for x in docs)
-        else:
-            return False
+    def primitive_array(self, docs):
+        '''Whether a document is an array of primitives'''
+        primitives = (int, float, bool, basestring)
+        return isinstance(docs, list) and \
+            all(isinstance(x, primitives) for x in docs)
 
 
     def __call__(self, docs, query):
@@ -167,12 +161,15 @@ class ColorOutput(Output):
             # Detect errors that don't raise exceptions
             self.error(docs['first_error'].replace('\t', '  '))
             return
+        if self.primitive_array(docs):
+            self.compact = True
         if isinstance(docs, (dict, int, float, bool, basestring)) or \
-           self.is_small_array(docs):
+           self.primitive_array(docs):
             # Print small things directly
             self.fprint(docs)
             self.print('Ran:\n', self.python_format(query))
             return
+        i = 0  # in case no results
         for i, doc in enumerate(docs, start=1):
             self.fprint(doc)
             if i % self.pagesize == 0:

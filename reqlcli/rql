@@ -4,7 +4,10 @@
 
 import argparse
 import reqlcli
+import os.path
 from pygments.styles import STYLE_MAP
+
+import rethinkdb as r
 
 DESC = '''\
 Run ReQL commands in the terminal.
@@ -42,11 +45,22 @@ def main(argv):
                         const='auto', default='auto',
                         help='Decide output format based on whether output '
                         'is being piped (this is the default)')
-    parser.add_argument('query', metavar='QUERY', help='ReQL query to run')
+    parser.add_argument('querystring', metavar='QUERY', help='ReQL query to run')
+    parser.add_argument('files', metavar='FILE', nargs='*',
+                        help='Input files. Contents will be available to '
+                        'the queries as legal variable names from the filenames'
+                        '  (e.g. "file+name.tar.gz" becomes "file_name")')
 
     args = parser.parse_args(argv[1:])
 
-    reqlcli.execute(args)
+    files = {
+        reqlcli.filename_to_var(filename): open(filename, 'rb').read()
+        for filename in args.files
+    }
+    conn = r.connect(args.host, args.port, args.db, args.auth_key)
+    output = reqlcli.Output.make(args.format, args.style, args.pagesize)
+
+    ex = reqlcli.ReQLExecution(args.querystring, files, conn, output)()
 
 if __name__ == '__main__':
     import sys

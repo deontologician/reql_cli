@@ -8,6 +8,9 @@ import os
 import sys
 import termios
 import tty
+import re
+import functools
+import base64
 
 from pygments import highlight
 from pygments.lexers import JsonLexer, PythonLexer
@@ -17,39 +20,80 @@ from pygments.styles import STYLE_MAP
 import rethinkdb as r
 
 
-def execute(args):
-    '''Executes a query with the given connection arguments'''
-    try:
-        conn = r.connect(args.host, args.port, args.db, args.auth_key)
-        output = Output.make(args.format, args.style, args.pagesize)
-        query = evaluate(args.query)
-        results = query.run(conn)
+class ReQLExecution(object):
+    def __init__(self, querystring, files, connection, output):
+        self.querystring = querystring
+        self.conn = connection
+        self.output = output
+        self.results = None
+        self._query = None
+        self.environment = files
+        self.environment.update({
+            'r': r,
+            '__builtins__': {
+                'True': True,
+                'False': False,
+                'None': None,
+            }
+        })
 
-        output(results, query)
+    @property
+    def query(self):
+        '''The compiled query from the input query string'''
+        if self._query is None:
+            self._query = r.expr(eval(self.querystring, self.environment))
+        return self._query
 
-    except r.RqlError as e:
-        output.error(e)
-    except NameError as ne:
-        output.error(ne.message)
-    except SyntaxError as se:
-        exc_list = traceback.format_exception_only(type(se), se)[1:]
-        exc_list[0] = output.python_format(exc_list[0])
-        output.error('\n', ''.join(exc_list))
-    except AttributeError as ae:
-        output.error(ae.message)
-    except KeyboardInterrupt:
-        pass
+    def __call__(self):
+        '''Executes the query and sends it to the output'''
+        try:
+            self.results = self.query.run(
+                self.conn,
+                binary_format=self.output.binary_format,
+                time_format=self.output.time_format)
+            self.output(self.results, self.query)
+        except r.RqlError as e:
+            self.output.error(e)
+        except NameError as ne:
+            self.output.error(ne.message)
+        except SyntaxError as se:
+            exc_list = traceback.format_exception_only(type(se), se)[1:]
+            exc_list[0] = self.output.python_format(exc_list[0])
+            self.output.error('\n', ''.join(exc_list))
+        except AttributeError as ae:
+            self.output.error(ae.message)
+        except KeyboardInterrupt:
+            pass
 
 
-def evaluate(querystring):
-    return r.expr(eval(querystring, {
-        'r': r,
-        '__builtins__': {
-            'True': True,
-            'False': False,
-            'None': None,
-        }
-    }))
+def filename_to_var(filename):
+    '''Transforms a filename into a usable variable name'''
+    return re.sub(r'\W', '_', os.path.basename(filename).split('.', 1)[0])
+
+
+def binary_patch(func):
+    '''decorator to monkey patch the json encoder so it doesn't
+    accidentally try to print out binaries (which may have null bytes
+    in them)'''
+
+    real_encoder = json.encoder.encode_basestring
+
+    def reql_encode_basestring(s):
+        if isinstance(s, r.ast.RqlBinary):
+            return '"' + base64.b64encode(s) + '"'
+        else:
+            return real_encoder(s)
+
+    @functools.wraps(func)
+    def _wrapper(*args, **kwargs):
+        orig = json.encoder.encode_basestring
+        json.encoder.encode_basestring = reql_encode_basestring
+        try:
+            return func(*args, **kwargs)
+        finally:
+            json.encoder.encode_basestring = orig
+
+    return _wrapper
 
 
 class DateJSONEncoder(json.JSONEncoder):
@@ -57,6 +101,7 @@ class DateJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
+
 
 class Output(object):
     '''Centralizes output behavior'''
@@ -76,8 +121,10 @@ class Output(object):
         elif format == 'array':
             return ArrayOutput()
         else:
-            raise Exception('{} {} {} is illegal!'.format(format, style, pagesize))
+            raise Exception('{} {} {} is illegal!'.format(
+                format, style, pagesize))
 
+    @binary_patch
     def format(self, doc):
         '''Dumps a json value according to the current format'''
         return json.dumps(
@@ -86,6 +133,7 @@ class Output(object):
             sort_keys=not self.compact,
             separators=(',', ':') if self.compact else (', ', ': '),
             cls=json.JSONEncoder if self.compact else DateJSONEncoder,
+            ensure_ascii=False,
         )
 
     def python_format(self, obj):
@@ -134,7 +182,7 @@ class ColorOutput(Output):
     '''User friendly output'''
 
     time_format = 'native'
-    binary_format = 'native'  # maybe do something nice with binary?
+    binary_format = 'native'
     compact = False
 
     def __init__(self, style, pagesize):

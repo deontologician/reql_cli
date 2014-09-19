@@ -121,6 +121,21 @@ $ rql --array 'r.table("posts")("id").limit(5)'
 
 Note: this format doesn't emit newlines
 
+Another nice feature is the ability to use files in your queries:
+
+```bash
+$ rql 'r.table("evenings").insert(r.json(file_1))' evening_and_morning.json
+```
+
+Or, if you want, you can insert binary files etc:
+
+```bash
+$ rql 'r.table("users").get(1).update({"avatar": r.binary(pic)})' pic.png
+```
+
+The files are imported as binary strings, so you'll need to use either
+`r.json` or `r.binary` if you want to manipulate them as anything else.
+
 ## OK, that's pretty great. What else?
 
 Uhh, you could use your RethinkDB server as a calculator if you want:
@@ -130,7 +145,7 @@ $ rql 'r.expr(1) + 3 + (r.expr(4) * 3)'
 16
 
 Ran:
- r.expr(1) + 3 + (r.expr(4) * 3)
+ ((r.expr(1) + r.expr(3)) + (r.expr(4) * r.expr(3)))
 ```
 
 ## Bugs
